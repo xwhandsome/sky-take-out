@@ -54,23 +54,37 @@ public class AutoFillAspect {
         Long currentId = BaseContext.getCurrentId();
 
         // 根据对应的数据库操作类型，为对应的字段赋值
-        if (operationType == OperationType.INSERT){
-            //4个字段需要赋值
+        if (operationType == OperationType.INSERT) {
             try {
-                Method setCreateTime = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_CREATE_TIME, LocalDateTime.class);
-                Method setCreateUser = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_CREATE_USER, Long.class);
-                Method setUpdateTime = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_UPDATE_TIME, LocalDateTime.class);
-                Method setUpdateUser = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_UPDATE_USER, Long.class);
+                // 1. 尝试填充 CreateTime (几乎所有实体都有)
+                try {
+                    Method setCreateTime = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_CREATE_TIME, LocalDateTime.class);
+                    setCreateTime.invoke(entity, now);
+                } catch (NoSuchMethodException ignored) {}
 
-                // 通过反射为对象属性赋值
-                setCreateTime.invoke(entity, now);
-                setCreateUser.invoke(entity, currentId);
-                setUpdateTime.invoke(entity, now);
-                setUpdateUser.invoke(entity, currentId);
+                // 2. 尝试填充 CreateUser (User类可能没有)
+                try {
+                    Method setCreateUser = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_CREATE_USER, Long.class);
+                    setCreateUser.invoke(entity, currentId);
+                } catch (NoSuchMethodException ignored) {}
+
+                // 3. 尝试填充 UpdateTime
+                try {
+                    Method setUpdateTime = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_UPDATE_TIME, LocalDateTime.class);
+                    setUpdateTime.invoke(entity, now);
+                } catch (NoSuchMethodException ignored) {}
+
+                // 4. 尝试填充 UpdateUser
+                try {
+                    Method setUpdateUser = entity.getClass().getDeclaredMethod(AutoFillConstant.SET_UPDATE_USER, Long.class);
+                    setUpdateUser.invoke(entity, currentId);
+                } catch (NoSuchMethodException ignored) {}
+
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                log.error("公共字段填充失败: {}", e.getMessage());
             }
         }
+
         else if (operationType == OperationType.UPDATE){
             //2个字段需要赋值
             try {
