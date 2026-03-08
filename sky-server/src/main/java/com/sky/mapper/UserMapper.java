@@ -21,4 +21,11 @@ public interface UserMapper {
      */
     @AutoFill(OperationType.INSERT)
     void insert(User user);
+
+    /**
+     * 根据id获取用户信息
+     * @param id
+     * @return
+     */
+    User getById(String id);
 }
